@@ -63,7 +63,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function enterRaffle() public payable EnsureRaffleOpen {
-        // require(msg.value >= i_entranceFee, Raffle__NotEnoughEtherSent()); // Check whether IF statement will be more gas efficient
         if (msg.value < i_entranceFee) {
             revert Raffle__NotEnoughEtherSent();
         }
