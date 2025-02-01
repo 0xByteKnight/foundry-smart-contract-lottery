@@ -74,22 +74,18 @@ forge test
 Users can enter the lottery by sending ETH to the contract.
 
 ```solidity
-lottery.enterLottery{value: 0.1 ether}();
+raffle.enterLottery{value: 0.1 ether}();
 ```
 
 ### 🏆 Picking a Winner
 The contract selects a random winner after a predetermined time.
 
 ```solidity
-lottery.pickWinner();
+raffle.performUpkeep(bytes calldata /* performData */);
 ```
 
 ### 💰 Withdrawing Winnings
 The winner automatically receives the lottery pool balance.
-
-```solidity
-lottery.claimWinnings();
-```
 
 ---
 
