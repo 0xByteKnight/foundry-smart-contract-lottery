@@ -9,12 +9,44 @@ import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {CreateSubscription, FundSubscription, AddConsumer} from "script/Interactions.s.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
 
 contract RaffleIntegrationTest is Test {
+    /*//////////////////////////////////////////////////////////////
+                           State Variables
+    //////////////////////////////////////////////////////////////*/
     Raffle raffle;
     HelperConfig helperConfig;
     VRFCoordinatorV2_5Mock vrfCoordinator;
     LinkToken linkToken;
+    uint256 subscriptionId;
+
+    /*//////////////////////////////////////////////////////////////
+                              Modifiers
+    //////////////////////////////////////////////////////////////*/
+
+    modifier SubscriptionCreated() {
+        CreateSubscription createSubscription = new CreateSubscription();
+        (subscriptionId,) = createSubscription.createSubscription(
+            helperConfig.getConfig().vrfCoordinator, helperConfig.getConfig().account
+        );
+        _;
+    }
+
+    modifier SubscriptionFunded() {
+        FundSubscription fundSubscription = new FundSubscription();
+        fundSubscription.fundSubscription(
+            helperConfig.getConfig().vrfCoordinator,
+            subscriptionId,
+            helperConfig.getConfig().link,
+            helperConfig.getConfig().account
+        );
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              Functions
+    //////////////////////////////////////////////////////////////*/
 
     function setUp() external {
         // Deploy mocks
@@ -41,18 +73,30 @@ contract RaffleIntegrationTest is Test {
         DeployRaffle deployRaffle = new DeployRaffle();
 
         // Act
-        (raffle, helperConfig) = deployRaffle.deployContract();
+        (raffle, helperConfig) = deployRaffle.run();
 
         // Assert
         assert(raffle.getSubscriptionId() != 0);
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
         assert(config.vrfCoordinator != address(0));
         assert(
-            VRFCoordinatorV2_5Mock(config.vrfCoordinator).consumerIsAdded(
-                raffle.getSubscriptionId(),
-                address(raffle)
-            )
+            VRFCoordinatorV2_5Mock(config.vrfCoordinator).consumerIsAdded(raffle.getSubscriptionId(), address(raffle))
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                       CreateSubscription Tests
+    //////////////////////////////////////////////////////////////*/
+
+    function testCreateSubscriptionUsingConfig() public {
+        // Arrange
+        CreateSubscription createSubscription = new CreateSubscription();
+
+        // Act
+        (subscriptionId,) = createSubscription.createSubscriptionUsingConfig();
+
+        // Assert
+        assert(subscriptionId != 0);
     }
 
     function testCreateSubscription() public {
@@ -60,25 +104,23 @@ contract RaffleIntegrationTest is Test {
         CreateSubscription createSubscription = new CreateSubscription();
 
         // Act
-        (uint256 subscriptionId, ) = createSubscription.createSubscription(
-            helperConfig.getConfig().vrfCoordinator,
-            helperConfig.getConfig().account
+        (subscriptionId,) = createSubscription.createSubscription(
+            helperConfig.getConfig().vrfCoordinator, helperConfig.getConfig().account
         );
 
         // Assert
         assert(subscriptionId != 0);
     }
 
-    function testFundSubscription() public {
+    /*//////////////////////////////////////////////////////////////
+                        FundSubscription Tests
+    //////////////////////////////////////////////////////////////*/
+
+    function testFundSubscription() public SubscriptionCreated {
         // Arrange
-        CreateSubscription createSubscription = new CreateSubscription();
-        (uint256 subscriptionId, ) = createSubscription.createSubscription(
-            helperConfig.getConfig().vrfCoordinator,
-            helperConfig.getConfig().account
-        );
+        FundSubscription fundSubscription = new FundSubscription();
 
         // Act
-        FundSubscription fundSubscription = new FundSubscription();
         fundSubscription.fundSubscription(
             helperConfig.getConfig().vrfCoordinator,
             subscriptionId,
@@ -87,64 +129,39 @@ contract RaffleIntegrationTest is Test {
         );
 
         // Assert
-       (uint256 balance, , , ,) = VRFCoordinatorV2_5Mock(helperConfig.getConfig().vrfCoordinator).getSubscription(subscriptionId);
+        (uint256 balance,,,,) =
+            VRFCoordinatorV2_5Mock(helperConfig.getConfig().vrfCoordinator).getSubscription(subscriptionId);
         assert(balance > 0);
-      
     }
 
-    function testAddConsumer() public {
+    /*//////////////////////////////////////////////////////////////
+                          AddConsumer Tests
+    //////////////////////////////////////////////////////////////*/
+
+
+
+    function testAddConsumer() public SubscriptionCreated SubscriptionFunded {
         // Arrange
-        CreateSubscription createSubscription = new CreateSubscription();
-        (uint256 subscriptionId, ) = createSubscription.createSubscription(
-            helperConfig.getConfig().vrfCoordinator,
-            helperConfig.getConfig().account
-        );
-        FundSubscription fundSubscription = new FundSubscription();
-        fundSubscription.fundSubscription(
-            helperConfig.getConfig().vrfCoordinator,
-            subscriptionId,
-            helperConfig.getConfig().link,
-            helperConfig.getConfig().account
-        );
+        AddConsumer addConsumer = new AddConsumer();
 
         // Act
-        AddConsumer addConsumer = new AddConsumer();
         addConsumer.addConsumer(
-            address(raffle),
-            helperConfig.getConfig().vrfCoordinator,
-            subscriptionId,
-            helperConfig.getConfig().account
+            address(raffle), helperConfig.getConfig().vrfCoordinator, subscriptionId, helperConfig.getConfig().account
         );
 
         // Assert
         assert(
             VRFCoordinatorV2_5Mock(helperConfig.getConfig().vrfCoordinator).consumerIsAdded(
-                subscriptionId,
-                address(raffle)
+                subscriptionId, address(raffle)
             )
         );
     }
 
-    function testRaffleWorkflow() public {
+    function testRaffleWorkflow() public SubscriptionCreated SubscriptionFunded {
         // Arrange
-        CreateSubscription createSubscription = new CreateSubscription();
-        (uint256 subscriptionId, ) = createSubscription.createSubscription(
-            helperConfig.getConfig().vrfCoordinator,
-            helperConfig.getConfig().account
-        );
-        FundSubscription fundSubscription = new FundSubscription();
-        fundSubscription.fundSubscription(
-            helperConfig.getConfig().vrfCoordinator,
-            subscriptionId,
-            helperConfig.getConfig().link,
-            helperConfig.getConfig().account
-        );
         AddConsumer addConsumer = new AddConsumer();
         addConsumer.addConsumer(
-            address(raffle),
-            helperConfig.getConfig().vrfCoordinator,
-            subscriptionId,
-            helperConfig.getConfig().account
+            address(raffle), helperConfig.getConfig().vrfCoordinator, subscriptionId, helperConfig.getConfig().account
         );
 
         // Act: Enter the raffle

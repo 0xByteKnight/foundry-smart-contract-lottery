@@ -9,6 +9,9 @@ import {Raffle} from "src/Raffle.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test, CodeConstants {
+    /*//////////////////////////////////////////////////////////////
+                           State Variables
+    //////////////////////////////////////////////////////////////*/
     Raffle public raffle;
     HelperConfig public helperConfig;
 
@@ -22,9 +25,16 @@ contract RaffleTest is Test, CodeConstants {
     address public PLAYER = makeAddr("player");
     uint256 public constant STARTING_PLAYER_BALANCE = 10 ether;
 
+    /*//////////////////////////////////////////////////////////////
+                                Events
+    //////////////////////////////////////////////////////////////*/
     event NewPlayerEnteredRaffle(address indexed player);
     event WinnerPicked(address indexed Winner);
     event WinnerPrizeTransferred(address indexed Winner, uint256 indexed winnerPrize);
+
+    /*//////////////////////////////////////////////////////////////
+                              Modifiers
+    //////////////////////////////////////////////////////////////*/
 
     modifier raffleEntered() {
         vm.prank(PLAYER);
@@ -41,9 +51,13 @@ contract RaffleTest is Test, CodeConstants {
         _;
     }
 
+    /*//////////////////////////////////////////////////////////////
+                              Functions
+    //////////////////////////////////////////////////////////////*/
+
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
-        (raffle, helperConfig) = deployer.deployContract();
+        (raffle, helperConfig) = deployer.run();
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
 
         entranceFee = config.entranceFee;
@@ -55,6 +69,10 @@ contract RaffleTest is Test, CodeConstants {
 
         vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                          enterRaffle Tests
+    //////////////////////////////////////////////////////////////*/
 
     function testRaffleInitializesInOpenState() public view {
         assert(raffle.getRaffleState() == Raffle.RaffleStates.Open);
@@ -103,6 +121,10 @@ contract RaffleTest is Test, CodeConstants {
         raffle.enterRaffle{value: entranceFee}();
     }
 
+    /*//////////////////////////////////////////////////////////////
+                          checkUpkeep Tests
+    //////////////////////////////////////////////////////////////*/
+
     function testCheckUpkeepReturnsFalseIfHasNoBalance() public {
         // Arrange
         vm.warp(block.timestamp + interval + 1);
@@ -146,6 +168,10 @@ contract RaffleTest is Test, CodeConstants {
         assert(upkeepNeeded);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                         performUpkeep Tests
+    //////////////////////////////////////////////////////////////*/
+
     function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public raffleEntered {
         // Act / Assert
         raffle.performUpkeep("");
@@ -183,6 +209,10 @@ contract RaffleTest is Test, CodeConstants {
         assert(uint256(requestId) > 0);
         assert(uint256(raffleState) == 1);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                       fulfillRandomWords Tests
+    //////////////////////////////////////////////////////////////*/
 
     function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId)
         public
