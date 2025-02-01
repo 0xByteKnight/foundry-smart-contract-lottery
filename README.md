@@ -1,4 +1,4 @@
-# 🎰 Foundry Smart Contract Lottery
+# 🎰 Smart Contract Lottery
 
 ![License](https://img.shields.io/badge/license-MIT-green)  
 ![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.28-blue)  
@@ -6,7 +6,7 @@
 
 ## 📌 Overview
 
-**Foundry Smart Contract Lottery** is a decentralized, transparent, and autonomous lottery system built using Solidity. This smart contract enables users to participate in a lottery where a winner is randomly selected after a specified duration.
+**Smart Contract Lottery** is a decentralized, transparent, and autonomous lottery system built using Solidity. This smart contract enables users to participate in a lottery where a winner is randomly selected after a specified duration.
 
 This repository contains the smart contract code, test scripts, and deployment instructions for the lottery system.
 
